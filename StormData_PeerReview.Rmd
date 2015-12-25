@@ -1,0 +1,26 @@
+---
+title: 'Reproducible Research: Peer Assessment 2'
+output:
+  html_document:
+    fig_caption: yes
+    highlight: tango
+    keep_md: yes
+    number_sections: no
+    theme: cerulean
+    toc: no
+  pdf_document: 
+    fig_caption: yes
+    highlight: tango
+    keep_md: yes
+    number_sections: yes
+    theme: cerulean
+    toc: no
+  
+date: "27 December 2015"
+---
+
+## 1.Synopsis
+
+## 2.Data Processing
+
+## 3. Results
