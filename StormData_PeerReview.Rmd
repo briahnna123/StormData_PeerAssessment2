@@ -22,10 +22,15 @@ date: "27 December 2015"
 ## 1. Synopsis
 
 ## 2. Data Processing
+Variables incorporated: TIME_ZONE, STATE, EVTYPE, 
+FATALITIES: direct/indirect causes of weather-related fatalities/injuries 
+INJURIES: direct/indirect causes of weather-related fatalities/injuries 
+PROPDMGEXP: estimates of damage “K” for thousands, “M” for millions, and 
+“B” for billions
 
 ## 3. Results
 
-```{r load_packages}
+```{r load_packages, echo=FALSE}
 library(dplyr)
 library(ggplot2)
 library(lattice)
@@ -38,7 +43,14 @@ library(lattice)
 setwd("~/Desktop/StormData_PeerAssessment2")
 
 # Step 2: Unzip file and Read the data into descriptive object
-weather_data <- read.csv(bzfile("repdata_data_StormData.csv.bz2"))
+weather_data <- read.csv(bzfile("repdata_data_StormData.csv.bz2")) # Data to Manipulate
+storm_data <- weather_data # Raw Data
+
+# Step 3: Look and Clean the Data,
+str(weather_data)
+
+# Step 4: Use dplyr package for easier manipulation of data frame
+weather_data <- tbl_df(weather_data) # Create dplyr data frame
 
 
 ```
