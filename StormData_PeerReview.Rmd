@@ -8,37 +8,87 @@ output:
     number_sections: no
     theme: cerulean
     toc: no
-  pdf_document: 
+  pdf_document:
     fig_caption: yes
     highlight: tango
     keep_md: yes
     number_sections: yes
     theme: cerulean
     toc: no
-  
 date: "27 December 2015"
+subtitle: 'Storm Data Analysis: Weather Events impact on Public Safety & Finance'
 ---
 
 ## 1. Synopsis
+During this analysis, the goal was to detect, if any, trends between weather 
+events and public health (fatalities or injuries) moreover weather events and 
+ecomonic cost (property or crop damage). The data came from the U.S. National 
+Oceanic and Atmospheric Administration's (NOAA) database. In this analysis, 
+it was found that there are statistically siginicant differences between total 
+fatalities+injuries among different weather event according to the ANOVA and 
+Tukeys HSD Comparison. Futhermore, the weather event which result in the highest
+public danger were: Tornadoes, Floods, Lightning, and Heat (top 4 events).
+It was also found economic cost were mostly due by different weather types. For
+Property Damage-- Tornadoes and Hail resulted in the highest cost and for Crop
+Damage-- Drought and Flood resulted in the highest cost.
+
 
 ## 2. Data Processing
-Variables incorporated: TIME_ZONE, STATE, EVTYPE, 
-FATALITIES: direct/indirect causes of weather-related fatalities/injuries 
-INJURIES: direct/indirect causes of weather-related fatalities/injuries 
-PROPDMGEXP: estimates of damage “K” for thousands, “M” for millions, and 
-“B” for billions
+*Variables Incorporated (during analysis):* <br> 
+**BGN_DATE:** Date, and Time Event occured <br>
+**TIME_ZONE:** Standard time Zone i.e, Eastern Standard Time (EST),
+Central Standard Time (CST), Mountain Standard Time (MST), <br>
+Time Zone correspond to the event's (weathers) location <br> 
+**STATE:** United States Territory (72 Locations: 50 States + 22 Other Locations) <br> 
+**EVTYPE:** Specific Weather Event (985 Different Weather Listed) <br> 
+**FATALITIES:** Direct/indirect causes of weather-related fatalities/injuries <br> 
+**INJURIES:** Direct/indirect causes of weather-related fatalities/injuries <br>
+**PROPDMG:** Property Damage Cost <br>
+**PROPDMGEXP:** Estimates Power cost, “K”/"k" for thousands, “M”/"m" for millions, <br> 
+“B”/"b" for billions, "h" for hundred and "0" for zero (p. 12) <br>
+**CROPDMG:** Crop Damage <br>
+**CROPDMGEXP:** Crop Damage Expenses <br>
 
-## 3. Results
+*Data:* (Link: https://d396qusza40orc.cloudfront.net/repdata%2Fdata%2FStormData.csv.bz2) <br> 
+The raw data was read into R using the basic 'read.csv()' function into a descriptive 
+object called "weather_data". The National Weather Service NOAA,
+contains specific weather data going back to 1995, so this data set was cut 
+off to 1995 and later, so missing values could be filled in by the NOAA data 
+(http://www.nws.noaa.gov/om/hazstats.shtml)
+Also it was noted in course information that more recent data have better 
+records. The storm data was processed by subseting the variables listed above. 
 
-```{r load_packages, echo=FALSE}
-library(dplyr)
-library(ggplot2)
-library(lattice)
+The weather data was processed again by subsetting the the type of weather event including:  <br>
+TORNADO, HAIL, RIP CURRENTS, LIGHTNING, <br>
+HEAVY RAIN, FLOOD, HEAT, COLD, WIND, <br>
+WINTER STORM, FOG, HURRICANE, <br>
+WILDFIRE, DROUGHT, <br>
 
+*Then data analysis included:* <br>
+1\. Factorial ANOVA, to see statistical pairwise comparisons between different
+weather groups. It was valid to use Factorial ANOVA becuase: <br>
+"Factorial ANOVA’s are used in research when one wants to analyze differences on
+a continuous dependant variable between two or more independent discrete
+grouping variables."" In this analysis, Weather Event (EVTYPE) will be compared
+by both Location (STATE) and COST. 
+(https://www.statisticssolutions.com/factorial-anova/)
+
+2\. Graphing, for fatalities/injuries and damage 
+<br>
+<br>
+
+```{r load_packages, results="hide", warning=FALSE, message=FALSE}
+# Step 1: Load Packages Needed for Analysis
+library(dplyr) # For Data Manipulation
+library(ggplot2) # For Graphing
+library(lattice) # For Graphing
+library(stats) # For Statistical Analysis
+library(utils) # For Graphing and Data Manipulation
+library(gridExtra) # For Graphings
 
 ```
 
-```{r preprocess_data}
+```{r preprocess_data, cache = TRUE}
 # Step 1: Set WD to cloned repository (located on the Computer)
 setwd("~/Desktop/StormData_PeerAssessment2")
 
@@ -47,11 +97,180 @@ weather_data <- read.csv(bzfile("repdata_data_StormData.csv.bz2")) # Data to Man
 storm_data <- weather_data # Raw Data
 
 # Step 3: Look and Clean the Data,
-str(weather_data)
+str(weather_data, strict.width = "cut")
 
 # Step 4: Use dplyr package for easier manipulation of data frame
 weather_data <- tbl_df(weather_data) # Create dplyr data frame
 
+# Step 5: Subset Data, where, EVTYPE factor levels are those associated with 
+# specifc weather events
+weather_sub <- weather_data
+weather_sub$EVTYPE <- as.character(weather_sub$EVTYPE) # Convert To Character
+weather_sub <- weather_sub[weather_data$EVTYPE=="TORNADO" 
+                            | weather_data$EVTYPE=="LIGHTNING"
+                            | weather_data$EVTYPE=="HAIL" 
+                            | weather_data$EVTYPE=="RIP CURRENTS"
+                            | weather_data$EVTYPE=="LIGHTNING" 
+                            | weather_data$EVTYPE=="HEAVY RAIN" 
+                            | weather_data$EVTYPE=="FLOOD" 
+                            | weather_data$EVTYPE=="HEAT"
+                            | weather_data$EVTYPE=="COLD" 
+                            | weather_data$EVTYPE=="WIND" 
+                            | weather_data$EVTYPE=="WINTER STORM" 
+                            | weather_data$EVTYPE=="FOG"
+                            | weather_data$EVTYPE=="HURRICANE" 
+                            | weather_data$EVTYPE=="WILDFIRE" 
+                            | weather_data$EVTYPE=="DROUGHT", ]
+
+weather_sub$EVTYPE <- as.factor(weather_sub$EVTYPE) # Convert back to Factor
+
+# Step 6: Subset Data, where date 1995 or later
+str <- c(1950:1994) # Set Object equal to unwanted dates
+toMatch <- paste(str, collapse="|") # Paste in OR operator for grepl() subset
+weather <- filter(weather_sub, !grepl(toMatch ,BGN_DATE)) # Subset the Date
+
+# Step 7: Subset Columns of Interest
+weather <- subset(weather, select= c("BGN_DATE", "TIME_ZONE", "STATE", "EVTYPE", 
+                                      "FATALITIES", "INJURIES", "PROPDMG",
+                                     "PROPDMGEXP","CROPDMG", "CROPDMGEXP" ))
+
+# Step 8: Rename the cost values in data frame for PROPDMGEXP and CROPDMGEXP
+levels(weather$PROPDMGEXP) # Look at all cost name indicators for PROPDMGEXP
+levels(weather$CROPDMGEXP) # Look at all cost name indicators for CROPDMGEXP
+
+Transform_COST <- function(c) {
+  
+    if (c %in% c('h', 'H')) # Return numeric value 2
+        return(2)
+    else if (c %in% c('k', 'K')) # Return numeric value 3
+        return(3)
+    else if (c %in% c('m', 'M')) # Return numeric value 6
+        return(6)
+    else if (c %in% c('b', 'B')) # Return numeric value 9
+        return(9)
+    else if (!is.na(as.numeric(c))) # Return a numeric value if already a numeric value
+        return(as.numeric(c))
+    else if (c %in% c('', '-', '?', '+')) # Return numeric value 0
+        return(0)
+  }
+
+# Property Damage
+Property_Damage_Expected <- sapply(weather$PROPDMGEXP, FUN=Transform_COST) 
+# Use sapply to apply function(c) to data
+
+weather$PROPERTY_DAMAGE_COST <- weather$PROPDMG * (10 ** Property_Damage_Expected)
+# Add new Column called PROPERTY_DAMAGE_COST with Computed Cost
+
+# Crop Damage
+Crop_Damage_Expected <- sapply(weather$CROPDMGEXP, FUN=Transform_COST) 
+# Use sapply to apply function(c) to data
+
+weather$CROP_DAMAGE_COST <- weather$CROPDMG * (10 ** Crop_Damage_Expected)
+# Add new Column called PROPERTY_DAMAGE_COST with Computed Cost
+
+weather[1:6, 3:12] # View Edited Data
 
 ```
 
+
+## 3. Results
+
+## Question 1: 
+#### Across the United States, which types of events (as indicated in the EVTYPE variable)
+#### are most harmful with respect to population health? <br>
+
+```{r question_1, cache=TRUE}
+
+# Step 1: Let's Conduct an ANOVA to see if there exist a relationship between
+# Specific Weather Event (EVTYPE variable) and FATALITIES+INJURIES
+
+Sum_by_Weather <- with(weather, tapply(FATALITIES+INJURIES , list(EVTYPE), sum, na.rm=TRUE))
+print(Sum_by_Weather) # Number of FATALITIES and INJURIES by Weather Type
+
+weather_ANOVA <- aov(FATALITIES+INJURIES ~ EVTYPE , data = weather) # ANOVA
+Weather_Comparisons <- TukeyHSD(weather_ANOVA,"EVTYPE", ordered=TRUE) # Tukeys Comparision
+Weather_Comparisons_df <- data.frame(Weather_Comparisons$EVTYPE) # Tukeys Comparision as dataframe
+Siginficant_diff<- Weather_Comparisons_df[Weather_Comparisons_df$p.adj<= 0.05,] # Subset P-values
+# Above Subset Valid Differences, a siginificant difference in mean FATALITIES+INJURIES values occurs
+# when p-value <= alpha and our alpha is 0.05 because the CI is 95%, an alpha of
+# 0.05 is our error, the chance of not seeing a siginigicant difference
+print(Siginficant_diff) # All significant differences
+```
+
+#### Above we were able to see with the ANOVA Tukeys HSD comparisions which weather events 
+#### differ in mean total FATALITIES+INJURIES, we can see from the output above there exist
+#### statistically siginifcant differences in mean total FATALITIES+INJURIES between many
+#### different types of weather events i.e.,TORNADO-DROUGHT, FOG-DROUGHT...
+
+```{r, Plot_1, fig.height=7, fig.width=11}
+# Step 2: Create Panel Plot Graph showing Weather Event Vs. Amount of FATALITIES or INJURIES
+weather$Total_Hurt <- weather$FATALITIES + weather$INJURIES # Sum FATALITIES and INJURIES
+
+health_plot <- ggplot(weather, aes(EVTYPE,Total_Hurt, color=EVTYPE )) + geom_bar(stat="identity")
+health_plot <- health_plot+ ggtitle("Weather Events vs. Total Health Fatalities/Injuries ")
+health_plot <- health_plot + theme(axis.text.x= element_text(angle=90, size=10))
+health_plot <- health_plot + scale_y_continuous(breaks = seq(0, 25000, by = 1500))
+health_plot <- health_plot + labs(x = "Weather Event Type", y = "Number of Fatalities+Injuries")
+print(health_plot) # Print Graph
+
+```
+
+#### The above graph shows the most harmful weather events with respect to population health, 
+#### the top 4 events are: Tornadoes, Floods, Lightning, and Heat
+ <br>
+ <br>
+ 
+## Question 2: 
+#### Across the United States, which types of events have the greatest economic consequences? <br>
+
+```{r question_2, cache=TRUE, fig.height=7, fig.width=11}
+# Step 1: Plot Graph sowing Weather Event vs. Property Damage Cost
+number_ticks <- function(n) {function(limits) pretty(limits, n)} # Set Amount of Y-axis Ticks
+damage_cost <- ggplot(weather, aes(x=EVTYPE, y=PROPERTY_DAMAGE_COST, color=EVTYPE))
+damage_cost <- damage_cost + geom_bar(stat="identity")+ scale_y_continuous(breaks=number_ticks(10))
+damage_cost <- damage_cost+ ggtitle("Weather Events vs. Property Damage Cost")
+damage_cost <- damage_cost+ labs(x = "Weather Event Type", y = "Property Damage Cost ($)")
+damage_cost <- damage_cost+ theme(axis.text.x= element_text(angle=90, size=10))
+print(damage_cost) # Print Graph
+
+max_cost <- max(weather$PROPERTY_DAMAGE_COST) # Find Highest Cost
+weather_max_cost <- weather[weather$PROPERTY_DAMAGE_COST==max_cost,"EVTYPE"] # Find Weather Event
+print(weather_max_cost) # Event Associated with most Property Damage Cost
+
+# Step 2: Plot Graph sowing Weather Event vs. Crop Damage Cost
+number_ticks <- function(n) {function(limits) pretty(limits, n)} # Set Amount of Y-axis Ticks
+damage_crop_cost <- ggplot(weather, aes(x=EVTYPE, y=CROP_DAMAGE_COST, color=EVTYPE))
+damage_crop_cost <- damage_crop_cost + geom_bar(stat="identity") 
+damage_crop_cost <- damage_crop_cost+ scale_y_continuous(breaks=number_ticks(10))
+damage_crop_cost <- damage_crop_cost + scale_y_continuous(breaks=number_ticks(10))
+damage_crop_cost <- damage_crop_cost+ ggtitle("Weather Events vs. Crop Damage Cost")
+damage_crop_cost <- damage_crop_cost+ labs(x = "Weather Event Type", y = "Crop Damage Cost ($)")
+damage_crop_cost <- damage_crop_cost+ theme(axis.text.x= element_text(angle=90, size=10))
+print(damage_crop_cost) # Print Graph
+
+max_crop_cost <- max(weather$CROP_DAMAGE_COST) # Find Highest Cost
+weather_max__crop_cost <- weather[weather$CROP_DAMAGE_COST==max_crop_cost,"EVTYPE"] 
+# Find Weather Event
+print(weather_max__crop_cost) # Event Associated with most Crop Damage Cost
+
+# Step 3: See Cost Break Down
+
+# Property
+top_3_prop <- weather[order(weather$PROPERTY_DAMAGE_COST, decreasing=T)[1:3],]
+top_3_prop <- subset(top_3_prop, select= c("EVTYPE", "PROPERTY_DAMAGE_COST"))
+print(top_3_prop)
+
+# Crop
+top_3_crop <- weather[order(weather$CROP_DAMAGE_COST, decreasing=T)[1:3],]
+top_3_crop <- subset(top_3_crop, select= c("EVTYPE", "CROP_DAMAGE_COST"))
+print(top_3_crop)
+  
+  
+```
+
+#### We can see, from the above graphs, the greatest economic consequence for Property Damage: <br>
+#### 1. Tornadoes 2. Hail and 3. Flood Cost <br>
+#### for Crop Damage: <br>
+#### 1. Drought 2. Flood and 3. Hail cost the most. <br>
+
+<br>
